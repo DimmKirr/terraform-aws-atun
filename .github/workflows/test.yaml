@@ -1,0 +1,60 @@
+name: Terraform Module Tests
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Run Terratest
+    runs-on: ubuntu-latest
+    
+    services:
+      localstack:
+        image: localstack/localstack:latest
+        env:
+          SERVICES: iam,s3
+          DEBUG: 1
+          DOCKER_HOST: unix:///var/run/docker.sock
+        ports:
+          - 4566:4566
+          - 4571:4571
+        options: >-
+          --name=localstack
+          --health-cmd="curl -s http://localhost:4566/_localstack/health | grep '\"ready\": true'"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+          cache: true
+
+      - name: Install Task
+        uses: arduino/setup-task@v1
+        with:
+          version: '3.x'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 'latest'
+
+      - name: Run tests with Task
+        run: task test
+        env:
+          AWS_ACCESS_KEY_ID: test
+          AWS_SECRET_ACCESS_KEY: test
+          AWS_DEFAULT_REGION: us-east-1
+          LOCALSTACK_ENDPOINT: http://localhost:4566
+          TF_VAR_env: test
