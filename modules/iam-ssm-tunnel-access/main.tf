@@ -1,3 +1,4 @@
+
 resource "aws_iam_policy" "this" {
   name        = "${var.env}-${var.name}"
   description = "Policy to allow SSM port forwarding sessions via EC2 instances"
@@ -57,7 +58,8 @@ resource "aws_iam_policy" "this" {
 
 resource "aws_iam_group_policy_attachment" "iam_group" {
   for_each = toset(var.attach_policy ? var.iam_group_arns : [])
-  group      = each.value
+  group      = regex("^arn:aws:iam::[0-9]+:group/(.+)$", each.value)[0]
+
   policy_arn = aws_iam_policy.this.arn
 }
 
@@ -73,4 +75,3 @@ resource "aws_iam_group_policy_attachment" "iam_user" {
   group = each.value
   policy_arn = aws_iam_policy.this.arn
 }
-
